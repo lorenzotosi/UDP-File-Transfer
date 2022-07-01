@@ -30,55 +30,58 @@ def files(path):
             l.remove(f)
     return l
 
-while True:
-    print('\n\rWaiting to receive a message...\n\r')
-    data, address = sock.recvfrom(4096) 
-    resp = data.decode('utf8')
-    if data:
-        sock.sendto('Connected to server'.encode(), address)
-        sendHelpMessage(sock, address)
-        
-        print('User has connected\n\r')
-        print('Sent help message\n\r')
-        while True:
-            action, address = sock.recvfrom(1024)
-            response = action.decode('utf8')
 
-            # Download the file
-            if response[0:3].lower() == 'get':
-                print('Sending the file...\n\r')
-                data = "arrivato download, te lo mando indietro" 
-                sent = sock.sendto(data.encode(), address)
-                #print('sent %s bytes back to %s' %(sent, address))
 
-            # Upload the file
-            elif response[0:3].lower() == 'put':
-                print('Storing the file...\n\r')
-                data = "arrivato upload, te lo mando indietro"
-                sent = sock.sendto(data.encode(), address)
-                #print('sent %s bytes back to %s' %(sent, address))
+try:
 
-            # Send help message
-            elif response.lower() == 'help':
-                print('Sending help message...\n\r')
-                sendHelpMessage(sock, address)
+    while True:
 
-            # Show file in folder
-            elif response.lower() == 'list':
-                print('Showing files...\n\r')
-                data = 'Files stored are: ' + str(files(pathToFiles))
-                sock.sendto(data.encode(), address)
+        print('\n\rWaiting to receive a message...\n\r')
+        data, address = sock.recvfrom(4096) 
+        resp = data.decode('utf8')
+        if data:
+            #sock.sendto('Connected to server'.encode(), address)
+            sendHelpMessage(sock, address)
+            
+            print('User has connected\n\r')
+            print('Sent help message\n\r')
+            while True:
+                action, address = sock.recvfrom(1024)
+                response = action.decode('utf8')
 
-            # Quit the program
-            elif response.lower() == 'quit':
-                print('Closing the program')
-                sock.close()
-                break
+                # Download the file
+                if response[0:3].lower() == 'get':
+                    print('Sending the file...\n\r')
+                    data = "arrivato download, te lo mando indietro" 
+                    sent = sock.sendto(data.encode(), address)
 
-            # Command not found
-            else:
-                print('Invalid command')
-                data = "Command not found"
-                sent = sock.sendto(data.encode(), address)
-                #print('sent %s bytes back to %s' %(sent, address))
-    break
+                # Upload the file
+                elif response[0:3].lower() == 'put':
+                    print('Storing the file...\n\r')
+                    data = "arrivato upload, te lo mando indietro"
+                    sent = sock.sendto(data.encode(), address)
+
+                # Send help message
+                elif response.lower() == 'help':
+                    print('Sending help message...\n\r')
+                    sendHelpMessage(sock, address)
+
+                # Show file in folder
+                elif response.lower() == 'list':
+                    print('Showing files...\n\r')
+                    data = 'Files stored are: ' + str(files(pathToFiles))
+                    sock.sendto(data.encode(), address)
+
+                # Quit the program
+                elif response.lower() == 'quit':
+                    print('Closing the program')
+                    sock.close()
+                    break
+                
+                # Invalid command or another user has connected
+                else:
+                    sendHelpMessage(sock, address)
+        break
+
+except Exception as error:
+    print(error)

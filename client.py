@@ -7,30 +7,9 @@ downloadLocation = os.getcwd()+"/client/download"
 uploadLocation = os.getcwd()+"/client/upload"
 
 def send(msg):
-    #print('\n\r%s' % msg)
     sent = sock.sendto(msg.encode(), server_address)
     data, server = sock.recvfrom(4096)
     print('%s\n\r' % data.decode('utf8'))
-
-# a function that ask the server to download a file and download it
-def get(fileName):
-    msg = 'get ' + fileName
-    send(msg)
-    data, server = sock.recvfrom(4096)
-    print('%s\n\r' % data.decode('utf8'))
-    if data.decode('utf8') == 'File not found':
-        print('File not found')
-    else:
-        print('File found')
-        send('ok')
-        data, server = sock.recvfrom(4096)
-        print('%s\n\r' % data.decode('utf8'))
-        file = open(downloadLocation+"/"+fileName, "wb")
-        file.write(data)
-        file.close()
-        print('File downloaded')
-        send('ok')
-    return
 
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
 
@@ -40,14 +19,15 @@ message = '\n\rConnecting to server...'
 
 print(message)
 
-sent = sock.sendto(message.encode(), server_address)
-data, server = sock.recvfrom(4096)
-print('%s\n\r' % data.decode('utf8'))
-data, server = sock.recvfrom(4096)
-print('%s\n\r' % data.decode('utf8'))
+try:
+    sent = sock.sendto(message.encode(), server_address)
+    #receive message
+    data, server = sock.recvfrom(4096)
+    print('%s\n\r' % data.decode('utf8'))
 
-while True:
-    try:
+
+    while True:
+        print('Write a command:')
         message = input()
 
         if message.lower() == 'quit':
@@ -75,5 +55,5 @@ while True:
         else:
             print('\n\rInvalid command')
             send(message.lower())
-    except Exception as info:
+except Exception as info:
         print(info)
