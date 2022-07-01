@@ -30,8 +30,6 @@ def files(path):
             l.remove(f)
     return l
 
-
-
 try:
 
     while True:
@@ -82,6 +80,7 @@ try:
                 else:
                     sendHelpMessage(sock, address)
         break
+
 
 except Exception as error:
     print(error)
