@@ -1,5 +1,14 @@
+from ctypes import sizeof
+from fileinput import filename
 import socket as sk
 import os
+import math
+import pickle
+from time import sleep
+from typing import List
+
+PACKET_SIZE=8192
+BUFF = 32768
 
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
 
@@ -7,7 +16,7 @@ server_address = ('localhost', 10000)
 print('\n\rStarting un on %s port %s' % server_address)
 sock.bind(server_address)
 
-pathToFiles = os.getcwd()+"/server/storedFiles"
+pathToFiles = os.getcwd()+"/server/storedFiles/"
 
 # Function to send the Help message.
 def sendHelpMessage(sock, address):
@@ -30,32 +39,62 @@ def files(path):
             l.remove(f)
     return l
 
+def fileLength(fileName:str)->int:
+    fileName= pathToFiles+"/"+fileName
+    with open(fileName, "rb") as file:
+        response = file.read()
+    numOfPackets = 1
+    size = len(response)
+    if size > PACKET_SIZE:
+        numOfPackets = math.ceil(size / PACKET_SIZE)
+    return numOfPackets
+
+def getList(pathToFiles, fileName, numOfPackets) -> List:
+    with open(pathToFiles + fileName, "rb") as file:
+        List = []
+        for i in range(numOfPackets):
+            toSend = {"index": i, "bytes": file.read(PACKET_SIZE)}
+            List.append(toSend)
+    return List
+
 try:
 
     while True:
 
         print('\n\rWaiting to receive a message...\n\r')
-        data, address = sock.recvfrom(4096) 
+        data, address = sock.recvfrom(32768) 
         resp = data.decode('utf8')
         if data:
-            #sock.sendto('Connected to server'.encode(), address)
             sendHelpMessage(sock, address)
-            
             print('User has connected\n\r')
             print('Sent help message\n\r')
             while True:
-                action, address = sock.recvfrom(1024)
+                action, address = sock.recvfrom(32768)
                 response = action.decode('utf8')
 
                 # Download the file
                 if response[0:3].lower() == 'get':
-                    print('Sending the file...\n\r')
-                    data = "arrivato download, te lo mando indietro" 
-                    sent = sock.sendto(data.encode(), address)
+                    fileName = response[4:]
+                    print('Sending the file to the client...\n\r')
+                    try:
+                        numOfPackets = fileLength(fileName)
+                    except IOError:
+                        print('File not found\n\r')
+                        sock.sendto('File not found'.encode(), address)
+                        continue
+                    sock.sendto("ACK".encode(), address)
+                    sock.sendto(str(numOfPackets).encode(), address)
+                        
+                    List = getList(pathToFiles, fileName, numOfPackets)
+                    print(f"Sending packages...")
+                    for i in List:
+                        sock.sendto(pickle.dumps(i), address)
+                        sleep(0.0001)
+                    print('File sent!!\n\r')
 
                 # Upload the file
                 elif response[0:3].lower() == 'put':
-                    print('Storing the file...\n\r')
+                    print('Storing the file the client has sent...\n\r')
                     data = "arrivato upload, te lo mando indietro"
                     sent = sock.sendto(data.encode(), address)
 
@@ -84,3 +123,4 @@ try:
 
 except Exception as error:
     print(error)
+
