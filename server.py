@@ -22,6 +22,7 @@ pathToFiles = os.getcwd()+"/server/storedFiles/"
 def sendHelpMessage(sock, address):
     """
     It sends a help message to the client
+    
     :param sock: the socket object
     :param address: The address of the server
     """
@@ -33,6 +34,12 @@ def sendHelpMessage(sock, address):
     sock.sendto(mainMessage.encode(), address)
 
 def files(path):
+    """
+    It returns a list of all the files in a directory, excluding hidden files
+    
+    :param path: the path to the directory you want to list
+    :return: A list of files in the directory.
+    """
     l = os.listdir(path)
     for f in l:
         if f.startswith("."):
@@ -40,6 +47,14 @@ def files(path):
     return l
 
 def fileLength(fileName:str)->int:
+    """
+    It takes a file name as a string, opens the file, reads the file, and returns the number of packets
+    that will be needed to send the file
+    
+    :param fileName: The name of the file you want to get the length of
+    :type fileName: str
+    :return: The number of packets that will be sent to the client.
+    """
     fileName= pathToFiles+"/"+fileName
     with open(fileName, "rb") as file:
         response = file.read()
@@ -50,6 +65,15 @@ def fileLength(fileName:str)->int:
     return numOfPackets
 
 def getList(pathToFiles, fileName, numOfPackets) -> List:
+    """
+    It takes a path to a file, the name of the file, and the number of packets to be sent, and returns a
+    list of dictionaries, each dictionary containing the index of the packet and the bytes of the packet
+    
+    :param pathToFiles: The path to the folder where the files are stored
+    :param fileName: The name of the file you want to send
+    :param numOfPackets: The number of packets that the file will be split into
+    :return: A list of dictionaries. Each dictionary has two keys: index and bytes.
+    """
     with open(pathToFiles + fileName, "rb") as file:
         List = []
         for i in range(numOfPackets):
