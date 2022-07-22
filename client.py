@@ -78,7 +78,7 @@ try:
             print('\n\rDownloading file...')
             sent = sock.sendto(message.encode(), server_address)
             data, server = sock.recvfrom(BUFF)
-            if  data.decode('utf8') == 'File not found':
+            if  data.decode('utf8') == 'no':
                 print('ERROR: File not found\n\r')
             else:
                 print('%s\n\r' % data.decode('utf8'))
@@ -102,29 +102,30 @@ try:
                 print(f"Downloaded {message[4:]} file from server")
 
         elif message[0:3].lower() == 'put':
-            print('\n\rUploading file...')
             fileName = message[4:]
-            # if the file doesn't exist, sends an error message
-            if not os.path.isfile(uploadLocation + fileName):
-                print('ERROR: File not found\n\r')
-                sock.sendto("no".encode(), server_address)
-            else:
-                # Sends the file name to the server
-                sock.sendto(message.encode(), server_address)
+            try:
+                # Get the number of packets
                 numOfPackets = fileLength(fileName)
-                # Send ACK
-                sock.sendto("ACK".encode(), server_address)
-                # Send the number of packets
-                sock.sendto(str(numOfPackets).encode(), server_address)
-                # Send the list of packets
-                List = getList(uploadLocation, fileName, numOfPackets)
-                print(f"Sending packages...")
-                # Send the packets
-                for i in List:
-                    sock.sendto(pickle.dumps(i), server_address)
-                    sleep(SLEEP)
-                print('File sent!!\n\r')
-
+            except IOError:
+                    print('File not found\n\r')
+                    #sock.sendto('no'.encode(), server_address)
+                    continue
+            print('\n\rUploading file...')
+            # Sends the file name to the server
+            sent = sock.sendto(message.encode(), server_address)
+            # Send ACK
+            sock.sendto("ACK".encode(), server_address)
+            # Send the number of packets
+            numOfPackets = fileLength(fileName)
+            sock.sendto(str(numOfPackets).encode(), server_address)
+            # Send the list of packets
+            List = getList(uploadLocation, fileName, numOfPackets)
+            print(f"Sending packages...")
+            # Send the packets
+            for i in List:
+                sock.sendto(pickle.dumps(i), server_address)
+                sleep(SLEEP)
+            print('File sent!!\n\r')
 
         elif message.lower() == 'list':
             print('\n\rShowing files...')

@@ -78,18 +78,17 @@ def getList(pathToFiles, fileName, numOfPackets) -> List:
     return List
 
 try:
-
+    
     while True:
-
         print('\n\rWaiting to receive a message...\n\r')
-        data, address = sock.recvfrom(32768) 
+        data, address = sock.recvfrom(BUFF) 
         resp = data.decode('utf8')
         if data:
             sendHelpMessage(sock, address)
             print('User has connected\n\r')
             print('Sent help message\n\r')
             while True:
-                action, address = sock.recvfrom(32768)
+                action, address = sock.recvfrom(BUFF)
                 response = action.decode('utf8')
 
                 # Download the file
@@ -101,7 +100,7 @@ try:
                         numOfPackets = fileLength(fileName)
                     except IOError:
                         print('File not found\n\r')
-                        sock.sendto('File not found'.encode(), address)
+                        sock.sendto('no'.encode(), address)
                         continue
                     print('Sending the file to the client...\n\r')
                     # Send ACK
@@ -121,33 +120,28 @@ try:
                 elif response[0:3].lower() == 'put':
                     print('Storing the file the client has sent...\n\r')
                     # Get the file name
-                    #data, server = sock.recvfrom(BUFF)
                     fileName = response[4:]
-                    if  data.decode('utf8') == 'no':
-                        print('ERROR: File not exists in client folder\n\r')
-                    else:
-                        print('%s\n\r' % data.decode('utf8'))
-                        # Receive message ACK
-                        data, server = sock.recvfrom(BUFF)
-                        # Receive number of packets
-                        data, server = sock.recvfrom(BUFF)
-                        msgLength = int(data.decode('utf8'))
-                        print('%s\n\r' % data.decode('utf8'))
-                        # Create list of packets
-                        listOfPackets=[]
-                        # Fills the lisf of packets with the packets data
-                        for i in range(msgLength):
-                            data, server = sock.recvfrom(BUFF)
-                            data = pickle.loads(data)
-                            listOfPackets.append(data)
-                            print(f"{data['pos']}/{msgLength}", end='\r')
-                        # Sort the list of packets by position
-                        listOfPackets.sort(key=lambda x: x['pos'])
-                        # With the packets sorted, create the file
-                        with open(pathToFiles + fileName, "wb") as newFile:
-                            for i in listOfPackets:
-                                newFile.write(i['bytes'])
-                        print(f"Stored {fileName} file from Client")
+                    # Receive message ACK
+                    response, client = sock.recvfrom(BUFF)
+                    # Receive number of packets
+                    response, client = sock.recvfrom(BUFF)
+                    msgLength = int(response.decode('utf8'))
+                    print('%s\n\r' % response.decode('utf8'))
+                    # Create list of packets
+                    listOfPackets=[]
+                    # Fills the list of packets with the packets data
+                    for i in range(msgLength):
+                        response, client = sock.recvfrom(BUFF)
+                        response = pickle.loads(response)
+                        listOfPackets.append(response)
+                        print(f"{response['pos']}/{msgLength}", end='\r')
+                    # Sort the list of packets by position
+                    listOfPackets.sort(key=lambda x: x['pos'])
+                    # With the packets sorted, create the file
+                    with open(pathToFiles + fileName, "wb") as newFile:
+                        for i in listOfPackets:
+                            newFile.write(i['bytes'])
+                    print(f"Stored {fileName} file from Client")
 
                 # Send help message
                 elif response.lower() == 'help':
@@ -170,8 +164,6 @@ try:
                 else:
                     sendHelpMessage(sock, address)
         break
-
-
 except Exception as error:
     print(error)
 
