@@ -1,14 +1,10 @@
-from ctypes import sizeof
-from fileinput import filename
 import socket as sk
 import os
 import math
 import pickle
 from time import sleep
 from typing import List
-
-PACKET_SIZE=8192
-BUFF = 32768
+from utils import *
 
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
 
@@ -72,12 +68,12 @@ def getList(pathToFiles, fileName, numOfPackets) -> List:
     :param pathToFiles: The path to the folder where the files are stored
     :param fileName: The name of the file you want to send
     :param numOfPackets: The number of packets that the file will be split into
-    :return: A list of dictionaries. Each dictionary has two keys: index and bytes.
+    :return: A list of dictionaries. Each dictionary has two keys: position and bytes.
     """
     with open(pathToFiles + fileName, "rb") as file:
         List = []
         for i in range(numOfPackets):
-            toSend = {"index": i, "bytes": file.read(PACKET_SIZE)}
+            toSend = {"pos": i, "bytes": file.read(PACKET_SIZE)}
             List.append(toSend)
     return List
 
@@ -98,29 +94,60 @@ try:
 
                 # Download the file
                 if response[0:3].lower() == 'get':
+                    # Get the file name
                     fileName = response[4:]
-                    print('Sending the file to the client...\n\r')
                     try:
+                        # Get the number of packets
                         numOfPackets = fileLength(fileName)
                     except IOError:
                         print('File not found\n\r')
                         sock.sendto('File not found'.encode(), address)
                         continue
+                    print('Sending the file to the client...\n\r')
+                    # Send ACK
                     sock.sendto("ACK".encode(), address)
+                    # Send the number of packets
                     sock.sendto(str(numOfPackets).encode(), address)
-                        
+                    # Send the list of packets
                     List = getList(pathToFiles, fileName, numOfPackets)
                     print(f"Sending packages...")
+                    # Send the packets
                     for i in List:
                         sock.sendto(pickle.dumps(i), address)
-                        sleep(0.0001)
+                        sleep(SLEEP)
                     print('File sent!!\n\r')
 
                 # Upload the file
                 elif response[0:3].lower() == 'put':
                     print('Storing the file the client has sent...\n\r')
-                    data = "arrivato upload, te lo mando indietro"
-                    sent = sock.sendto(data.encode(), address)
+                    # Get the file name
+                    #data, server = sock.recvfrom(BUFF)
+                    fileName = response[4:]
+                    if  data.decode('utf8') == 'no':
+                        print('ERROR: File not exists in client folder\n\r')
+                    else:
+                        print('%s\n\r' % data.decode('utf8'))
+                        # Receive message ACK
+                        data, server = sock.recvfrom(BUFF)
+                        # Receive number of packets
+                        data, server = sock.recvfrom(BUFF)
+                        msgLength = int(data.decode('utf8'))
+                        print('%s\n\r' % data.decode('utf8'))
+                        # Create list of packets
+                        listOfPackets=[]
+                        # Fills the lisf of packets with the packets data
+                        for i in range(msgLength):
+                            data, server = sock.recvfrom(BUFF)
+                            data = pickle.loads(data)
+                            listOfPackets.append(data)
+                            print(f"{data['pos']}/{msgLength}", end='\r')
+                        # Sort the list of packets by position
+                        listOfPackets.sort(key=lambda x: x['pos'])
+                        # With the packets sorted, create the file
+                        with open(pathToFiles + fileName, "wb") as newFile:
+                            for i in listOfPackets:
+                                newFile.write(i['bytes'])
+                        print(f"Stored {fileName} file from Client")
 
                 # Send help message
                 elif response.lower() == 'help':
