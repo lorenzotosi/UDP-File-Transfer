@@ -2,12 +2,26 @@ import math
 import pickle
 import os
 import socket as sk
+import hashlib
 from time import sleep
 from utils import *
 from typing import List
 
 downloadLocation = os.getcwd()+"/client/download/"
 uploadLocation = os.getcwd()+"/client/upload/"
+
+def hashList(List:List)->str:
+    """
+    It takes a list of dictionaries, and returns a string that is the hash of the list of dictionaries
+    
+    :param List: The list of dictionaries you want to hash
+    :type List: List
+    :return: A string that is the hash of the list of dictionaries
+    """
+    hash = hashlib.sha256()
+    for i in List:
+        hash.update(pickle.dumps(i))
+    return hash.hexdigest()
 
 def send(msg)->str:
     sent = sock.sendto(msg.encode(), server_address)
@@ -18,17 +32,17 @@ def send(msg)->str:
 def getList(pathToFiles, fileName, numOfPackets) -> List:
     """
     It takes a path to a file, the name of the file, and the number of packets to be sent, and returns a
-    list of dictionaries, each dictionary containing the index of the packet and the bytes of the packet
+    list of dictionaries, each dictionary containing the index of the packet and the value of the packet
     
     :param pathToFiles: The path to the folder where the files are stored
     :param fileName: The name of the file you want to send
     :param numOfPackets: The number of packets that the file will be split into
-    :return: A list of dictionaries. Each dictionary has two keys: position and bytes.
+    :return: A list of dictionaries. Each dictionary has two keys: position and value.
     """
     with open(pathToFiles + fileName, "rb") as file:
         List = []
         for i in range(numOfPackets):
-            toSend = {"pos": i, "bytes": file.read(PACKET_SIZE)}
+            toSend = {"pos": i, "value": file.read(PACKET_SIZE)}
             List.append(toSend)
     return List
 
@@ -95,11 +109,16 @@ try:
                     print(f"{data['pos']}/{msgLength}", end='\r')
                 # Sort the list of packets by position
                 listOfPackets.sort(key=lambda x: x['pos'])
-                # With the packets sorted, create the file
-                with open(downloadLocation + message[4:], "wb") as newFile:
-                    for i in listOfPackets:
-                        newFile.write(i['bytes'])
-                print(f"Downloaded {message[4:]} file from server")
+                # Receive the hash of the list of packets from the server
+                data, server = sock.recvfrom(BUFF)
+                hash = data.decode('utf8')
+                if hash != hashList(listOfPackets):
+                    print('ERROR: File corrupted\n\r')
+                else:
+                    with open(downloadLocation + message[4:], "wb") as newFile:
+                        for i in listOfPackets:
+                            newFile.write(i['value'])
+                    print(f"Downloaded {message[4:]} file from server")
 
         elif message[0:3].lower() == 'put':
             fileName = message[4:]
@@ -125,6 +144,8 @@ try:
             for i in List:
                 sock.sendto(pickle.dumps(i), server_address)
                 sleep(SLEEP)
+             # Send the hash of the file
+            sock.sendto(hashList(List).encode(), server_address)
             print('File sent!!\n\r')
 
         elif message.lower() == 'list':
