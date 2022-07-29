@@ -158,6 +158,6 @@ try:
 
         else:
             print('\n\rInvalid command')
-            send(message.lower())
+            #send(message.lower())
 except Exception as info:
         print(info)
