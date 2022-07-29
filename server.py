@@ -15,7 +15,6 @@ sock.bind(server_address)
 
 pathToFiles = os.getcwd()+"/server/storedFiles/"
 
-# Function to send the Help message.
 def sendHelpMessage(sock, address):
     """
     It sends a help message to the client
