@@ -145,23 +145,29 @@ try:
                     # Create list of packets
                     listOfPackets=[]
                     # Fills the list of packets with the packets data
-                    for i in range(msgLength):
-                        response, client = sock.recvfrom(BUFF)
-                        response = pickle.loads(response)
-                        listOfPackets.append(response)
-                        print(f"{response['pos']}/{msgLength}", end='\r')
-                    # Sort the list of packets by position
-                    listOfPackets.sort(key=lambda x: x['pos'])
-                    data, server = sock.recvfrom(BUFF)
-                    hash = data.decode('utf8')
-                    if hash != hashList(listOfPackets):
-                        print('ERROR: File corrupted\n\r')
-                    else:
-                        with open(pathToFiles + fileName, "wb") as newFile:
-                            for i in listOfPackets:
-                                newFile.write(i['value'])
-                        print(f"Stored {fileName} file from Client")
-                    
+                    try:
+                        for i in range(msgLength):
+                            sock.settimeout(5)
+                            response, client = sock.recvfrom(BUFF)
+                            response = pickle.loads(response)
+                            listOfPackets.append(response)
+                            print(f"{response['pos']}/{msgLength}", end='\r')
+                            # Sort the list of packets by position
+                        sock.settimeout(None)
+                        listOfPackets.sort(key=lambda x: x['pos'])
+                        data, server = sock.recvfrom(BUFF)
+                        hash = data.decode('utf8')
+                        if hash != hashList(listOfPackets):
+                            print('ERROR: File corrupted\n\r')
+                        else:
+                            with open(pathToFiles + fileName, "wb") as newFile:
+                                for i in listOfPackets:
+                                    newFile.write(i['value'])
+                            print(f"Stored {fileName} file from Client")   
+                    except Exception as e:
+                        print('\n\rTimeout')
+                        sock.settimeout(None)
+                        continue
 
                 # Send help message
                 elif response.lower() == 'help':

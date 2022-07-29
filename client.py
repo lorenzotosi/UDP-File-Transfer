@@ -25,7 +25,9 @@ def hashList(List:List)->str:
 
 def send(msg)->str:
     sent = sock.sendto(msg.encode(), server_address)
+    sock.settimeout(5)
     data, server = sock.recvfrom(BUFF)
+    sock.settimeout(None)
     print('%s\n\r' % data.decode('utf8'))
     return data.decode('utf8')
 
@@ -74,8 +76,10 @@ print(message)
 
 try:
     sent = sock.sendto(message.encode(), server_address)
+    sock.settimeout(5)
     #receive message
     data, server = sock.recvfrom(BUFF)
+    sock.settimeout(None)
     print('%s\n\r' % data.decode('utf8'))
 
     while True:
@@ -90,35 +94,45 @@ try:
 
         elif message[0:3].lower() == 'get':
             print('\n\rDownloading file...')
-            sent = sock.sendto(message.encode(), server_address)
-            data, server = sock.recvfrom(BUFF)
-            if  data.decode('utf8') == '404':
-                print('ERROR: File not found\n\r')
-            else:
-                print('%s\n\r' % data.decode('utf8'))
-                # Receive message length
+            try:
+                sent = sock.sendto(message.encode(), server_address)
+                sock.settimeout(5)
                 data, server = sock.recvfrom(BUFF)
-                msgLength = int(data.decode('utf8'))
-                # Create list of packets
-                listOfPackets=[]
-                # Fills the lisf of packets with the packets data
-                for i in range(msgLength):
-                    data, server = sock.recvfrom(BUFF)
-                    data = pickle.loads(data)
-                    listOfPackets.append(data)
-                    print(f"{data['pos']}/{msgLength}", end='\r')
-                # Sort the list of packets by position
-                listOfPackets.sort(key=lambda x: x['pos'])
-                # Receive the hash of the list of packets from the server
-                data, server = sock.recvfrom(BUFF)
-                hash = data.decode('utf8')
-                if hash != hashList(listOfPackets):
-                    print('ERROR: File corrupted\n\r')
+                sock.settimeout(None)
+                if  data.decode('utf8') == '404':
+                    print('ERROR: File not found\n\r')
                 else:
-                    with open(downloadLocation + message[4:], "wb") as newFile:
-                        for i in listOfPackets:
-                            newFile.write(i['value'])
-                    print(f"Downloaded {message[4:]} file from server")
+                    print('%s\n\r' % data.decode('utf8'))
+                    # Receive message length
+                    data, server = sock.recvfrom(BUFF)
+                    msgLength = int(data.decode('utf8'))
+                    # Create list of packets
+                    listOfPackets=[]
+                    # Fills the lisf of packets with the packets data      
+                    for i in range(msgLength):
+                        sock.settimeout(5)
+                        data, server = sock.recvfrom(BUFF)
+                        data = pickle.loads(data)
+                        listOfPackets.append(data)
+                        print(f"{data['pos']}/{msgLength}", end='\r')
+                    # Sort the list of packets by position
+                    sock.settimeout(None)
+                    listOfPackets.sort(key=lambda x: x['pos'])
+                    # Receive the hash of the list of packets from the server
+                    data, server = sock.recvfrom(BUFF)
+                    hash = data.decode('utf8')
+                    if hash != hashList(listOfPackets):
+                        print('ERROR: File corrupted\n\r')
+                    else:
+                        with open(downloadLocation + message[4:], "wb") as newFile:
+                            for i in listOfPackets:
+                               newFile.write(i['value'])
+                        print(f"Downloaded {message[4:]} file from server")
+            except Exception as e:
+                print('\n\rTimed out\n\r')
+                sock.settimeout(None)
+                continue
+                
 
         elif message[0:3].lower() == 'put':
             fileName = message[4:]
@@ -151,11 +165,19 @@ try:
 
         elif message.lower() == 'list':
             print('\n\rShowing files...')
-            send(message.lower())
+            try:
+                send(message.lower())
+            except Exception as e:
+                print('\n\rTimed out\n\r')
+                continue
 
         elif message.lower() == 'help':
             print('\n\rShowing help...')
-            send(message.lower())
+            try:
+                send(message.lower())
+            except Exception as e:
+                print('\n\rTimed out\n\r')
+                continue
 
         else:
             print('\n\rInvalid command')
