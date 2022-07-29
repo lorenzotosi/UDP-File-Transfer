@@ -132,8 +132,9 @@ try:
             print('\n\rUploading file...')
             # Sends the file name to the server
             sent = sock.sendto(message.encode(), server_address)
-            # Send ACK
-            sock.sendto("ACK".encode(), server_address)
+            # Receive message ACK
+            data, server = sock.recvfrom(BUFF)
+            print('%s\n\r' % data.decode('utf8'))
             # Send the number of packets
             numOfPackets = fileLength(fileName)
             sock.sendto(str(numOfPackets).encode(), server_address)

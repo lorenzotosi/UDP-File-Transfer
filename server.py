@@ -138,8 +138,8 @@ try:
                     print('Storing the file the client has sent...\n\r')
                     # Get the file name
                     fileName = response[4:]
-                    # Receive message ACK
-                    response, client = sock.recvfrom(BUFF)
+                    # Send ACK
+                    sock.sendto("ACK".encode(), address)
                     # Receive number of packets
                     response, client = sock.recvfrom(BUFF)
                     msgLength = int(response.decode('utf8'))
