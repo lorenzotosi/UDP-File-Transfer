@@ -115,7 +115,7 @@ try:
                         numOfPackets = fileLength(fileName)
                     except IOError:
                         print('File not found\n\r')
-                        sock.sendto('no'.encode(), address)
+                        sock.sendto('404'.encode(), address)
                         continue
                     print('Sending the file to the client...\n\r')
                     # Send ACK

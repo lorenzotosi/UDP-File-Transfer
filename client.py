@@ -92,7 +92,7 @@ try:
             print('\n\rDownloading file...')
             sent = sock.sendto(message.encode(), server_address)
             data, server = sock.recvfrom(BUFF)
-            if  data.decode('utf8') == 'no':
+            if  data.decode('utf8') == '404':
                 print('ERROR: File not found\n\r')
             else:
                 print('%s\n\r' % data.decode('utf8'))
