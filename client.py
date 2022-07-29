@@ -145,10 +145,17 @@ try:
                     continue
             print('\n\rUploading file...')
             # Sends the file name to the server
-            sent = sock.sendto(message.encode(), server_address)
-            # Receive message ACK
-            data, server = sock.recvfrom(BUFF)
-            print('%s\n\r' % data.decode('utf8'))
+            try:
+                sent = sock.sendto(message.encode(), server_address)
+                sock.settimeout(5)
+                # Receive message ACK
+                data, server = sock.recvfrom(BUFF)
+                print('%s\n\r' % data.decode('utf8'))
+            except Exception as e:
+                print('\n\rTimed out\n\r')
+                sock.settimeout(None)
+                continue
+            sock.settimeout(None)
             # Send the number of packets
             numOfPackets = fileLength(fileName)
             sock.sendto(str(numOfPackets).encode(), server_address)
